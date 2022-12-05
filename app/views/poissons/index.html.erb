@@ -1,0 +1,16 @@
+<p style="color: green"><%= notice %></p>
+
+<div style="padding-top: 80px;">
+<h1>Розподіл Пуассона</h1>
+
+<div id="poissons">
+  <% @poissons.each do |poisson| %>
+    <%= render poisson %>
+    <p>
+      <%= link_to "Показати розподіл", poisson, :style => "font-size: 18px; color: black;" %>
+    </p>
+  <% end %>
+</div>
+
+<%= link_to "Додатий новий набір параметрів", new_poisson_path, :style => "font-size: 18px; color: black;" %>
+</div>

@@ -1,0 +1,32 @@
+<%= form_with(model: negbinom) do |form| %>
+  <% if negbinom.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(negbinom.errors.count, "error") %> prohibited this negbinom from being saved:</h2>
+
+      <ul>
+        <% negbinom.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :rparam, style: "display: block" %>
+    <%= form.number_field :rparam %>
+  </div>
+
+  <div>
+    <%= form.label :kparam, style: "display: block" %>
+    <%= form.number_field :kparam %>
+  </div>
+
+  <div>
+    <%= form.label :p, style: "display: block" %>
+    <%= form.text_field :p %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>

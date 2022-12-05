@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  rparam: 1
+  kparam: 1
+  p: 1.5
+
+two:
+  rparam: 1
+  kparam: 1
+  p: 1.5

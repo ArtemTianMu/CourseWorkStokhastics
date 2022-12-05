@@ -1,0 +1,2 @@
+class Negbinom < ApplicationRecord
+end

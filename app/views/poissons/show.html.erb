@@ -1,0 +1,368 @@
+<%require './Logic/add_maths.rb'%>
+<%$maths = AddMaths.new%>
+<%$n = 100000 %>
+
+
+<p style="color: green"><%= notice %></p>
+
+
+<main role="main" class="flex-shrink-0">
+  <div class="container" style="margin-top: 80px; margin-bottom: 80px">
+    <div>
+      <%= render @poisson %>
+
+      <p><%= link_to "Редагувати параметри", edit_poisson_path(@poisson), :style=>'color: black; font-size: 20px'%></p>
+      <p><%= link_to "Повернутись до інших наборів", poissons_path , :style=>'color: black; font-size: 20px' %></p>
+
+      <%= button_to "Видалити даний набір", @poisson, method: :delete, :style=> 'text-decoration: none'%>
+
+      <%
+        def poisson(k)
+          y = Array.new
+          (0..k).each do |i|
+            y.append(Math::exp(-1.0*@poisson.lamdapar)*(@poisson.lamdapar**i)/factorial(i))
+          end
+          y
+        end
+
+        def poisson_function(k)
+          Math::exp(-1.0*@poisson.lamdapar)*(@poisson.lamdapar**k)/factorial(k)
+        end
+
+        def distribution_interval
+          y = poisson(@poisson.k)
+
+          hash_data = Hash.new
+
+          (0..@poisson.k).each do |i|
+            hash_data[i] = 0
+          end
+
+          (0..$n).each do |_|
+            gamma = Random.new.rand(0.0..1.0)
+            prob = 0.0
+            (0..@poisson.k).each do |i|
+              prob += y[i]
+              if gamma < prob
+                if hash_data.has_key?(i)
+                  hash_data[i] += 1
+                else
+                  hash_data[i] = 1
+                end
+                break
+              end
+            end
+          end
+
+
+          (0..@poisson.k).each do|i|
+            hash_data[i] = hash_data[i]/(1.0*$n)
+          end
+
+          hash_data
+        end
+
+        def factorial(m)
+          if m == 0 or m == 1
+            1
+          else
+            factorial(m-1)*m
+          end
+        end
+
+        def distribution_theory
+          hash_data = Hash.new
+          (0..@poisson.k).each do |i|
+            hash_data[i]=Math::exp(-1.0*@poisson.lamdapar)*(@poisson.lamdapar**i)/factorial(i)
+          end
+          hash_data
+        end
+
+        def neiman
+
+          w = poisson_function(0)
+          (1..@poisson.k).each do |i|
+            poisson_i = poisson_function(i)
+            if poisson_i>w
+              w = poisson_i
+            end
+          end
+
+
+          hash_data = Hash.new
+
+          (0..@poisson.k-1).each do |i|
+            hash_data[i] = 0
+          end
+
+          (0..$n).each do |_|
+            element = neiman_random_element(w,@poisson.k,@poisson.lamdapar)
+            if hash_data.has_key?(element)
+              hash_data[element] += 1
+            else
+              hash_data[element] = 1
+            end
+          end
+
+          (0..@poisson.k-1).each do |i|
+            hash_data[i] = hash_data[i]/(1.0*$n)
+          end
+
+          hash_data
+
+        end
+
+        def neiman_random_element(w,n,labmda)
+          while true
+            gamma1 = Random.new.rand(0.0..1.0)
+            gamma2 = Random.new.rand(0.0..1.0)
+            x = random_discrete(n,gamma1)
+            y = w*gamma2
+            if poisson_function(x) > y
+              return x
+            end
+          end
+        end
+
+        def random_discrete(n,gamma)
+          prob = 1.0/n
+          k = 0
+          (1..n-1).each do |i|
+            if gamma < i*prob
+              return k
+            end
+            k+=1
+          end
+          k
+        end
+
+        def calculate(lambda,right_boundary, previous_x)
+          gamma1 = random_discrete(right_boundary,Random.new.rand(0.0..1.0))
+          gamma2 = random_discrete(right_boundary,Random.new.rand(0.0..1.0))
+          delta = ((1.0/3.0) * right_boundary)
+          x1 = previous_x + (delta * (-1.0 + 2.0 * gamma1)).floor
+
+          if x1 < 0 or x1 > right_boundary
+            return previous_x
+          end
+
+          previous_x_calculation = poisson_function(previous_x)
+          alpha = poisson_function(x1) / previous_x_calculation
+
+          if alpha >= 1.0 or alpha > gamma2
+            return x1
+          end
+
+          previous_x
+        end
+
+        def methropolith_distribution
+          n = @poisson.k
+          hash_data = Hash.new
+          (0..n-1).each do |i|
+            hash_data[i] = 0
+          end
+          element = random_discrete(n,Random.new.rand(0.0..1.0))
+          (0..$n).each do |i|
+            element = calculate(@poisson.lamdapar,n,element)
+            if hash_data.has_key?(element)
+              hash_data[element] += 1
+            else
+              hash_data[element] = 1
+            end
+          end
+
+          (0..n-1).each do |i|
+            hash_data[i] = hash_data[i]/(1.0*$n)
+          end
+
+          hash_data.delete(n)
+
+          hash_data
+        end
+
+        def characteristics(x)
+          expected_value = 0.0
+          (0..x.length-1).each do |i|
+            expected_value += i*x[i]
+          end
+
+          dispertion = 0.0
+
+          (0..x.length-1).each do |i|
+            dispertion += x[i]*(i-expected_value)*(i-expected_value)
+          end
+
+
+          moda = 0
+          max_value = x[0]
+          (1..x.length-1).each do |i|
+            if max_value<x[i]
+              moda = i
+              max_value = x[i]
+            end
+          end
+
+          [expected_value,dispertion,moda]
+
+        end
+
+
+
+
+      %>
+      <div>
+        <h1>Метод інтервалів</h1>
+      <%=
+        $interval_method = distribution_interval
+        $theory = distribution_theory
+        line_chart [
+                       { name: 'За методом інтервалів', data: $interval_method },
+                       { name: 'Теоретичні значення', data: $theory },
+                     ], xmin: 0, xmax: @poisson.k-1, width:"1000px", height:"400px", label: 'Функція ймовірності', xtitle: 'k', ytitle: 'P(x = k)'%>
+      </div>
+      <div>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення математичного очікування: <b> <%=@poisson.lamdapar%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення математичного очікування: <b> <%=(characteristics($interval_method)[0]).round(3)%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=(@poisson.lamdapar-(characteristics($interval_method)[0]).round(3)).round(3)%>  </b></p>
+        <br>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення дисперсії: <b> <%=@poisson.lamdapar%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення дисперсії: <b> <%=(characteristics($interval_method)[1]).round(3)%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=(@poisson.lamdapar-(characteristics($interval_method)[1]).round(3)).round(3)%>  </b></p>
+        <br>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення моди: <b> <%=@poisson.lamdapar.floor%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення моди: <b> <%=characteristics($interval_method)[2]%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=(@poisson.lamdapar.floor-characteristics($interval_method)[2]).round(1)%>  </b></p>
+
+
+      </div>
+
+      <div>
+        <h1>Метод Неймана</h1>
+        <%=
+          $neiman_method = neiman
+          line_chart [
+                       { name: 'За методом Неймана', data: $neiman_method },
+                       { name: 'Теоретичні значення', data: $theory },
+                     ], xmin: 0, xmax: @poisson.k-1, width:"1000px", height:"400px", label: 'Функція ймовірності', xtitle: 'k', ytitle: 'P(x = k)'%>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення математичного очікування: <b> <%=@poisson.lamdapar%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення математичного очікування: <b> <%=(characteristics($neiman_method)[0]).round(3)%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=(@poisson.lamdapar-(characteristics($neiman_method)[0]).round(3)).round(3)%>  </b></p>
+        <br>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення дисперсії: <b> <%=@poisson.lamdapar%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення дисперсії: <b> <%=(characteristics($neiman_method)[1]).round(3)%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=(@poisson.lamdapar-(characteristics($neiman_method)[1]).round(3)).round(3)%>  </b></p>
+        <br>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення моди: <b> <%=@poisson.lamdapar.floor%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення моди: <b> <%=characteristics($neiman_method)[2]%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=(@poisson.lamdapar.floor-characteristics($neiman_method)[2]).round(1)%>  </b></p>
+
+
+      </div>
+
+      <div>
+        <h1>Метод Метрополіса</h1>
+        <%=
+          $methropolis = methropolith_distribution
+          line_chart [
+                       { name: 'За методом Метрополіса', data: $methropolis },
+                       { name: 'Теоретичні значення', data: $theory },
+                     ], xmin: 0, xmax: @poisson.k-1, width:"1000px", height:"400px", label: 'Функція ймовірності', xtitle: 'k', ytitle: 'P(x = k)'%>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення математичного очікування: <b> <%=@poisson.lamdapar%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення математичного очікування: <b> <%=(characteristics($methropolis)[0]).round(3)%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=((@poisson.lamdapar-(characteristics($methropolis)[0]).round(3)).round(3)).abs%>  </b></p>
+        <br>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення дисперсії: <b> <%=@poisson.lamdapar%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення дисперсії: <b> <%=(characteristics($methropolis)[1]).round(3)%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=((@poisson.lamdapar-(characteristics($methropolis)[1]).round(3)).round(3)).abs%>  </b></p>
+        <br>
+        <p style="color: #2E2F30; font-size: 18px">Теоретичне значення моди: <b> <%=@poisson.lamdapar.floor%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Практичне значення моди: <b> <%=characteristics($methropolis)[2]%>  </b></p>
+        <p style="color: #2E2F30; font-size: 18px">Різниця: <b> <%=((@poisson.lamdapar-(characteristics($methropolis)[2]).round(3)).round(3)).abs%>  </b></p>
+
+
+        <p style="font-size: 20px;">Практично отримані результати можна подати у вигляді таблиці</p>
+        <table style="font-size: 18px;padding: 10px;border:1px; ">
+          <tr>
+            <th>Метод</th>
+            <th>Математичне очікування</th>
+            <th>Дисперсія</th>
+            <th>Мода</th>
+          </tr>
+          <tr>
+            <td>Метод інтервалів</td>
+            <td><%=(characteristics($interval_method)[0]).round(3)%></td>
+            <td><%=(characteristics($interval_method)[1]).round(3)%> </td>
+            <td><%=(characteristics($interval_method)[2]).round(3)%></td>
+          </tr>
+          <tr>
+            <td>Метод Неймана</td>
+            <td><%=(characteristics($neiman_method)[0]).round(3)%></td>
+            <td><%=(characteristics($neiman_method)[1]).round(3)%></td>
+            <td><%=(characteristics($neiman_method)[2]).round(3)%></td>
+          </tr>
+          <tr>
+            <td>Метод Метрополіса</td>
+            <td><%=(characteristics($methropolis)[0]).round(3)%></td>
+            <td><%=(characteristics($methropolis)[1]).round(3)%></td>
+            <td><%=(characteristics($methropolis)[2]).round(3)%></td>
+          </tr>
+
+        </table>
+
+        <div>
+         <%=
+           $meth = methropolith_distribution
+           scatter_chart [
+          { name: 'За методом інтервалів', data: distribution_interval, :library => {:colors => ["red"]} },
+          { name: 'Теоретичні значення', data: $theory, :library => {:colors => ["green"]} },
+          {name: "За методом Неймана", data: $neiman_method, :library => {:colors => ["yellow"]}},
+          {name: "За методом Метрополіса", data: $meth, :library => {:colors => ["blue"]}}
+          ],colors: ["#63b598", "#556A0C", "#ea9e70", "#a48a9e", "#c6e1e8"], xmin: 0, xmax: @poisson.k-1, width:"1000px", height:"400px", xtitle: 'k', ytitle: 'Pi/Pn'%>
+
+        </div>
+
+      </div>
+
+
+
+      <%
+        def to_file(theory,interval,neiman,methropolith)
+          text_data = ""
+          (0..@poisson.k-1).each do |i|
+            text_data += i.to_s+ " "
+          end
+          text_data += "\n"
+          (0..@poisson.k-1).each do |i|
+            text_data += theory[i].round(6).to_s+" "
+          end
+          text_data += "\n"
+          (0..@poisson.k-1).each do |i|
+            text_data += interval[i].round(6).to_s+" "
+          end
+          text_data += "\n"
+          (0..@poisson.k-1).each do |i|
+            text_data += neiman[i].round(6).to_s+" "
+          end
+          text_data += "\n"
+          (0..@poisson.k-1).each do |i|
+            text_data += methropolith[i].round(6).to_s+" "
+          end
+          puts text_data
+          text_data
+        end
+
+      %>
+      <script>
+          var text = <%=to_file($theory,$interval_method,$neiman_method,$methropolis).inspect.html_safe%>;
+          document.write(
+              '<a style="font-size: 22px;color: #2E2F30" href="data:text/plain;charset=utf-8,%EF%BB%BF' + encodeURIComponent(text) + '" download="data.txt">Зберегти результати моделювання</a>'
+          )
+      </script>
+
+
+    </div>
+  </div>
+</main>
+
+

@@ -1,0 +1,11 @@
+<h1>Editing poisson</h1>
+
+<%= render "form", poisson: @poisson %>
+
+<br>
+
+<div>
+  <%= link_to "Перейти до даного набору", @poisson, :style=>'color: black; font-size: 20px' %>
+  <br>
+  <%= link_to "Повернутись до інших наборів", poissons_path, :style=>'color: black; font-size: 20px' %>
+</div>
